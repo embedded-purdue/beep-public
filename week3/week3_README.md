@@ -121,7 +121,7 @@ Before you begin, please remember to create a new project:
 
 4. Select a location for the new folder (organize however you like!)
 
-5. Replace the ```main.c``` & ```CMakeLists.txt``` files in the ```main``` folder of your new project with the versions provided in this week's github folder.
+5. Replace the  ```main``` folder of your new project with the template main folder provided in this week's github folder.
 
 ![main-folder](images/main-folder.png)
 

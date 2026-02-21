@@ -52,7 +52,25 @@ To setup PWM channels you first need to setup the base timer for its counter, si
 
 ![Board Setup](images/schematic.png)
 
-### 4.2.2 Included Libraries
+### 4.2.2 Setup
+
+Before you begin, please remember to create a new project:
+1. Press ```ctrl+shift+p``` to open up the command panel
+2. Look for ```ESP-IDF: Create New Empty Project```
+
+![new-project](images/new-project.png)
+
+3. Enter a folder name in the popup window
+
+![popup](images/popup.png)
+
+4. Select a location for the new folder (organize however you like!)
+
+5. Replace the  ```main``` folder of your new project with the template main folder provided in this week's github folder.
+
+![main-folder](images/main-folder.png)
+
+### 4.2.3 Included Libraries
 ```C
 #include "driver/gptimer.h"
 #include "driver/gpio.h"
@@ -77,7 +95,7 @@ For getting current time, used to debounce buttons.
 ```
 For logging messages to serial monitor.
 
-### 4.2.3 Global Variables
+### 4.2.4 Global Variables
 
 #### Constants
 ```C
@@ -112,7 +130,7 @@ gptimer_handle_t timer_handle;
 ``` 
 Handle for the FreeRTOS timer object, not needed outside of the setup function, but should we to need to change/stop it, it becomes necessary. Good practice to make this a global or local within app_main (or whatever task is using it).
 
-### 4.2.4 Activity
+### 4.2.5 Coding
 
 As seen in the schematic, the only hardware change this week was replacing the 3 separate LEDs with the single RGB LED. The activity goal hasn't changed, and as such most of the code from week 3 will be reused as is. The software changes this week take two forms, setup functions such as:
 ```C

@@ -31,7 +31,25 @@ The protocol we will be using today, I2C, allows many masters and many subordina
 
 ![i2c-connect](images/i2c-connect.png)
 
-UART and SPI a
+UART and SPI are both **push-pull** protocols, where the master has to manually hold the wires at high and low voltage, as opposed to I2C, which is **open-drain**. This means that the pull-up resistors you see in the image make both wires default to high voltage, and a bus master just pulls the line low. This is what allows I2C to have multiple bus masters, if two masters tried to drive a line in push-pull they could short between each other's power and ground, which is obviously an issue. Since I2C masters only ever pull low, it isn't an issue.
+
+The other important functional difference is **duplex** behavior. UART and SPI are **full duplex**, meaning you can send and receive data at the same time. UART acheives this by having separate wires for TX and RX, and SPI through MOSI and MISO. I2C is **half duplex**, since there is only one data line (**SDA**), you can only do one of send or receive data at once. 
+
+Besides how the protocols function, one also needs to think about the speed of each protocol. Push-pull protocols are generally faster (pull-up resistors decrease slew rate), with open-drain protocols like I2C being slower. Some typical speeds:
+
+* I2C: 100KHz -> 1MHz
+* SPI: 2MHz -> 50MHz
+* UART: ~115KHz (UART does not have a clock line)
+
+### 5.1.2 I2C Details
+For our application, all I2C transactions are initiated by the ESP32, with the display responding. A typical transaction looks like this:
+
+![i2c-bits](images/i2c-bits.png)
+
+The bus master pulls **SDA** (the data line) low while **SCL** (the clock line) is high, which is the standard **start bit**. This tells the other devices on the bus that a transaction is coming. The next 7 bits are the **device address**, which is usually unique to each of the satellite devices on the bus. The display we are using today's ID is 0x27, all devices on the bus listen to these first 7 bits to determine whether the transaction is meant for them. The next bit is the Read/Write bit, which determines what type of transaction this is. The next bit is the satellite device **ACK** (acknowledge), which it sends if it matches the ID and correctly received the first byte.  
+
+The rest of the transaction is processed byte by byte, with acks between each. The master can provide however many bits it wants in a write and receive however many it wants in a read, only stopping when the master allows the bus to go high while SCL is high, the **stop** bit. Commonly I2C devices will have a **register map** in their datasheet which tells us where to look for specific data, and transactions are structured like: *Start*, *I2C_ADDR*, *R/W*, *Register Address*, *Data*..., *Stop*. Or a write and read back to back, where you write the register address and then read on the next transaction.
+
 ## 5.2 Walkthrough
 
 ### 5.2.1 Wiring

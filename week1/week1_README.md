@@ -3,140 +3,134 @@
 ## Overview
 Welcome to BEEP! This first week focuses on getting comfortable with the embedded development environment and understanding the most fundamental concept in embedded systems: **General Purpose Input/Output (GPIO)**.
 
-You will learn how to control the physical world using code (Blinking an LED) and how to read information from the world (Reading a button).
+You will learn how to control the physical world using code (blinking an LED) and how to gather information from the world (reading a button).
 
-## Step 0: Environment Setup
+## 1.1 Hardware
 
-*Ryan fill in prease*
+<img src="images/1/pinout.jpg">
 
-## Step 1: Hardware Setup
+For this and all future activities, we will be using the **Sunfounder ESP32 Starter Kit**. [Here](https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/components/component_list.html) you can see the full component list as well as documentation for each included item. These activities will all start with hardware assembly, which requires that you understand how to read [KiCAD](https://www.kicad.org/) diagrams as well as find the correct components in your kit.  
 
-![ESP32 Pinout](images/pinout.jpg)
+If you're unfamiliar with KiCAD, there's a great introduction video [here](https://www.youtube.com/watch?v=vLnu21fS22s&list=PLUOaI24LpvQPls1Ru_qECJrENwzD7XImd). You shouldn't need more than the first video for the activities we will be doing (it walks through *creating* a schematic which is useful for learning how they work, but you will not be asked to create any of your own)
 
-For this lab and all future labs, we will be using the **ESP32 WROOM32E** devkit. This is a small, low-cost development board that is perfect for embedded development. It has a built-in debugger and is easy to use. The devkit is a breadboard-friendly board, making it easy to connect components.
+### 1.1.1 Breadboards
 
-### 1.1 Breadboard Setup
+<img src="images/1/breadboard.png">
 
-![Breadboard](images/breadboard.png)
+Breadboards are used to connect components without soldering. They are a great way to test and debug your circuit before solififying a design. The pins are connected by numbered row with the exception of the power rails, which are connected to all of the other pins in their column rail. The + and - power rails are used to power external components, and it very important that you ***never*** connect them together directly, as this causes a short-circuit and damages equipment.
 
-Breadboards are used to connect components without soldering. They are a great way to test and debug your circuit before solififying a design. Pins are connected horizontally, and components are connected vertically (this is flipped in the diagram above). The breadboard pictured here should be similar to the one provided in your kit. 
+### 1.1.2 USB and Power
 
-The red and blue lines on the breadboard are power rails, which can be used to power other components. The each pin in a power rail is connected to *all* other pins in the same rail.
+When programming your ESP32, you will need to connect it to your computer via a USB cable. This connection allows you to upload your code, send and receive data (like print statements), and provides power to the breakout board. There are 3 types of pins (5V, 3.3V, and GND) that supply power from the USB cable to your breadboard and the external components on it. 
 
-### 1.2 Power
+By convention, we will connect a 3.3V (**OR** 5V, but not both) pin to our positive (red) power rail, and a GND pin to our negative (blue) power rail. 
 
-When programming your ESP32, you will need to connect it to your computer via a USB cable. This cable will also supply power to your microcontroller. Some of the pins on the ESP32 are channel the voltage from the USB cable to your breadboard, which can be used to power other components. 
+### 1.1.3 LEDs
 
-By convention, we will connect a 3.3V pin to our positive (red) power rail, and a GND pin to our negative (blue) power rail. Go ahead and wire these together now, while referencing the pinout diagram above.
+<img src="images/1/led.png" alt="ESP32 pinout" width="203">
+<img src="images/1/resistor.png" alt="Resistor bands" height = 300 width="400">
 
-### 1.3 LEDs
+An LED (Light Emitting Diode) emits light when an electric current flows through it. LEDs are polarized, meaning they have a positive (anode) and negative (cathode) terminal, and can only emit light when current flows from the anode to the cathode. 
 
-<img src="images/led.png" alt="ESP32 pinout" width="203">
-<img src="images/resistor.png" alt="Resistor bands" width="400">
+LEDs almost always need a current-limiting resistor to prevent burn-out, as they cannot handle as much as the microcontroller's pins can provide. The ESP32 has a built-in current-limiting resistor for each GPIO pin, but it is not always sufficient for LEDs. Any resistor from ~100-300 Ohms will work just fine.
 
-An LED (Light Emitting Diode) is a component that emits light when an electric current flows through it. LEDs are polarized, meaning they have a positive and negative terminal, and can only emit light when the current flows in the correct direction. The longer leg of the LED is the anode, and the shorter leg is the cathode. 
+### 1.1.4 Buttons
 
-LEDs also almost always need a current-limiting resistor to limit the current flowing through them. This is to prevent the LED from burning out. The ESP32 has a built-in current-limiting resistor for each GPIO pin, but it is not always sufficient for LEDs. So, also look for a 100 ohm resistor in your kit, and use it to limit the current flowing through the LED.
+<img src="images/1/button.png">
 
-Now, we can wire the LED to the breadboard. We will use GPIO27 to control this LED, so connect the longer leg of the LED to GPIO27, and the shorter leg to GND. But, don't forget to add the current-limiting resistor in series with the LED too. 
+Buttons are a common input device used in embedded circuits. They are simple to use, and can be used in a wide range of applications. Typical buttons like the one shown above, are SPST (single pole, single throw) switches, which means that there is **one** switch that connects **two** pins. The pin pairs on each side of the button are electrically connected, the duplicates are only present for mechanical stability. 
 
-### 1.4 Buttons
+Most button circuits involve one pin connected to a GPIO pin and the other connected to ground, registering low when the button is pressed. This configuration requires a **pull-up** resistor on the GPIO pin side of the button. This ensures that the pin's value is tied high, until the button press shorts the pin to ground, pulling it low.
 
-![Button](images/button.png)
+### 1.1.5 Circuit Setup
 
-Buttons are a common input device used to control microcontrollers. They are simple to use, and can be used to control a wide range of applications. 
+<img src="images/1/board.jpg" height = 400>
 
-Wiring a button is different from wiring an LED, but the concept is the same. Our button has 4 terminals, but we will only be using two of them. When pressed, the button connects its two sides together.
+This week's circuit is simple, press the button and the light turns on, release it and it turns off again! As shown in the diagram, connect GPIO pin 27 to the LED's anode and the LED's cathode to ground. The 220 Ohm resistor can go on either side of the LED, as long as it is placed **in-series**. The button should have one side connected to GPIO pin 26 and the other to ground.
 
-Place the button over the divider on the breadboard, and connect two *unconnected* sides to GPIO26 and GND respectively. The other two sides can be left unconnected.
-
-## Step 2: Writing Software
-
-Now that we have our hardware set up, we can write some software to control it. Open `main/main.c` in your editor. This is where we will write our C code.
-
-We want to build a program that reads the state of the button, and if it is held down, flashes the LED.
-
-### 2.0 Concept: GPIO Configuration
-
-Before writing code, it's important to understand *why* we configure pins.
-
-**1. GPIO Modes (Input vs Output)**
-Microcontroller pins are flexible; they can be Inputs, Outputs, or various other special functions. By default, they are often disconnected (high impedance) to protect the chip.
-*   **Output Mode**: The chip connects the pin to its internal voltage driver. This allows the code to forcefully drive the pin to 3.3V (High) or 0V (Low), which is needed to power an LED.
-*   **Input Mode**: The chip disconnects the driver and connects a voltage sensor. This allows the code to "read" if the voltage at the pin is High or Low, which is effective for reading a button.
-
-**2. Pull Modes (Pull-Up vs Pull-Down)**
-When a button is *not* pressed, it is just an open wire. The pin is effectively connected to nothing. This is called a "floating" state, where the pin can randomly read High or Low due to static electricity or interference.
-*   **Pull-Up**: Connects the pin to 3.3V through a weak internal resistor. So, when the button is open, the pin reads **High (1)** (default state). When you press the button (connecting it to GND), the direct connection to ground overpowers the weak resistor, and the pin reads **Low (0)**.
-*   **Pull-Down**: Connects the pin to GND through a weak resistor. Default is Low, Pressing button (connected to 3.3V) makes it High.
-*   *Note: In our circuit, we connected the button to GND. So we MUST use a Pull-Up resistor to ensure it stays High when not pressed.*
-
-### 2.1 Includes and Defines
-
-First, we need to include the necessary libraries and define our pin mappings. Add the following to the top of `main.c`:
-
-```c
-#include "driver/gpio.h"
-#include "rom/ets_sys.h"
-
-#define LED_PIN 27
-#define BUTTON_PIN 26
-```
-
-**Explanation:**
-- `#include "driver/gpio.h"`: Gives us access to the ESP32's GPIO (General Purpose Input/Output) driver, so we can check buttons and turn on LEDs.
-- `#include "rom/ets_sys.h"`: Provides system helper functions, specifically for creating delays (`ets_delay_us`).
-- `#define`: These assign human-readable names to our pin numbers (27 and 26), making the code easier to understand and update.
-
-### 2.2 Main Function Loop
-
-In embedded C, the `app_main` function is the entry point. A typical firmware program initializes peripherals (like pins) once, and then enters an infinite `while(1)` loop to continuously process data.
-
-Copy the following template into your file, replacing the existing `app_main`:
-
-```c
-void app_main(void) {
-    // -------------------------
-    // 1. PIN CONFIGURATION
-    // -------------------------
-    // TODO: Configure your LED and Button pins here
-    // Hint: Use gpio_reset_pin(), gpio_set_direction(), and gpio_set_pull_mode()
+<img src="images/1/schematic.png" height = 500>
 
 
-    int led_state = 0;
+## 1.2 Environment Setup
 
-    // -------------------------
-    // 2. MAIN LOOP
-    // -------------------------
-    while (1) {
-        // TODO: Read the button state
-        // Hint: use gpio_get_level(PIN_NUMBER) to get a 0 or 1
+We have chosen the *ESP-IDF* as the development environment for BEEP. To get started you must have [Visual Studio Code](https://code.visualstudio.com/download) downloaded. Click on the link and download the appropriate version for your OS if you don't have it already. The next step is downloading the *ESP-IDF* extension, which requires the following steps: 
+1. Open VScode (*do not open a folder yet*), navigate to the **Extensions** tab on the sidebar, and search *ESP-IDF*. Install the one highlighted in this screenshot:    
+<img src="images/2/search.png" height = 250>
 
-        // TODO: If button is pressed (remember input is pulled UP, so pressed == 0)
-        //       Then toggle the LED state, write it to the LED pin, and wait a bit.
-        
-        // Hint: use gpio_set_level(PIN, LEVEL) and ets_delay_us(MICROSECONDS)
-    }
-}
-```
+2. Click the **ESP-IDF: Explorer** button in the Extensions tab, open the **advanced** dropdown and click on **Open ESP-IDF Installation Manager**.   
+<img src="images/2/installation-manager.png">
+3. You may be prompted to select a mirror. If so, select **github**.   
+<img src="images/2/mirror.png">
 
-**Explanation:**
-- **Pin Configuration**: Before the loop, we must tell the ESP32 which pins are Inputs (Button) and which are Outputs (LED).
-- **Infinite Loop**: The `while(1)` ensures our program never stops. It constantly checks the button thousands of times per second.
+4. Now the **EIM** (Espressif Installtion Manager) should open, at which point you should click **Start Installation**.   
+<img src="images/2/eim.png" height = 300>
 
-### 2.3 Implementation Tasks
+5. Select **Easy Installation**   
+<img src="images/2/options.png" height = 300>
 
-Use the TODO comments above to finish the code. Here is what you need to achieve:
+6. Then click **Start Installation** again and wait for the installation to finish.   
+<img src="images/2/mid-install.png">
 
-1.  **Configure LED**: Reset the `LED_PIN` and set its direction to `GPIO_MODE_OUTPUT`.
-2.  **Configure Button**: Reset the `BUTTON_PIN`, set its direction to `GPIO_MODE_INPUT`, and enable the internal pull-up resistor with `gpio_set_pull_mode` using `GPIO_PULLUP_ONLY`.
-3.  **The Logic**:
-    - Inside the loop, read the button.
-    - If the button value is `0` (Pressed), flip `led_state` (if it was 0 make it 1, if 1 make it 0).
-    - Write the new `led_state` to the `LED_PIN`.
-    - Delay for 1 second (1,000,000 microseconds) so you can see the flash.
+Once you have the extension installed, you should setup a parent folder to hold the individual week folders you'll be creating. For windows users we suggest placing it in your `C:\Users\{your username}` folder. This is not a requirement though, as long as you don't have any spaces in the filepath it will work. **DO NOT** place the parent folder inside of OneDrive as the filepath spaces will break the build system, if your windows/mac username has spaces in it come find one of the BEEP leaders and we will assist you. Now, open VSCode and do the following:
 
-### 2.4 References
+1. Press ```ctrl+shift+p``` to open up the VSCode command panel at the top of your screen
+2. Search for ```ESP-IDF: Create New Empty Project```
 
-For more information on the functions used in this lab, check out the official ESP-IDF documentation:
-*   [ESP-IDF GPIO API Reference](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/gpio.html)
+<img src="images/2/new-project.png" width = 250>
+
+3. Enter a folder name in the popup window (entirely up to you)
+
+<img src="images/2/popup.png" width = 300>
+
+4. Select a location for the new folder, which should be inside the parent folder you created earlier.
+
+5. Open your new project folder in VSCode and replace the  ```main``` folder with the template main folder provided in this week's github repository.
+
+<img src="images/2/main-folder.png" width = 200>
+
+## 1.3 Software
+
+Now that you have your hardware and environment ready, you're almost ready to write some software! Open `main/main.c` in your editor. If you copied in the `main` folder from this week's github repository, you should see this:  
+<img src="images/3/main-c.png">
+
+Those top 3 lines are the `include` statements. These are how you reference code written in other files, and are critical to all embedded systems development. The three files included are all part of the **ESP-IDF**. IDF stands for **IoT Development Framework**, keyword **framework**. This means that the IDF provides some code for interacting with the microcontroller's internal hardware out-of-the-box, which you will use often.
+
+Directly following the includes are **macro** definitions. These are program-wide constants that represent some value. In this case, they represent the integers corresponding to the GPIO pins you connected your components to. At compile time, the compiler replaces every instance of these macros with the value it is defined as. These are meant to make your code easier to read, and they are used heavily in the IDF. 
+
+Next, `app_main`. You will write many functions in these activities, but IDF programs always start execution here. Code in `app_main` will generally follow the same structure: some one-time setup code followed by an infinite loop. All of the `gpio` functions you see are declared in `driver/gpio.h`. You'll be using lots of these **SDK** (software development kit) functions from the IDF, but they usually won't be filled in like shown above. 
+
+In order to find and/or fill in these functions you'll need one of two things, the [SDK Docs](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/index.html) or VScode **Intellisense**. Intellisense allows you to `ctrl` click on a header file include statement (or any code declared in a header file, whether it be a macro, function, data type, etc.) to open the header file and peek at its contents. As you can imagine, this is much quicker than reading through the online documentation. However, it isn't supported by default, you'll need to complete these 3 steps in order to get it working.
+
+1. Download the C/C++ VSCode Extension (also useful for other things)  
+<img src="images/3/c-extension.png">
+
+2. Press `ctrl + shift + p` to open the VSCode command terminal again, and run **Add VS Code Configuration Folder**.
+<img src="images/3/add-config.png">
+
+3. Navigate to the ESP-IDF Extension in the sidebar, and press `Build Project`. This may take a while the first time you build every week, after it completes your project should like this (now with build folder!):  
+<img src="images/3/.vscode.png">
+
+This leads right into the next topic, the **build system**. Another part of the IDF, it handles compiling your code into raw binaries, uploading to the microcontroller, and communicating with the microcontroller during code execution. These are the commands you are provided with by the IDF:
+
+<img src="images/3/commands.png">
+
+The 3 you will use the most are `Build Project` which compiles your code from C to binary, `Flash Device` which uploads the binary file to the microcontroller's memory, and `Monitor Device` which opens up a terminal where you can view print statements from the microcontroller. Monitoring (while helpful) isn't strictly necessary, but building and flashing must be done every time you change your code and wish to test the newer version. Some other important commands:
+
+* `Select Flash Method` Selects how the IDF communicates with your microcontroller to upload code, run this and select **UART** every time you start a new project.
+
+* `Select Port to Use` and `Select Monitor Port to Use` These choose the USB port to connect to your microcontroller on. You will also have to run these once every time you start a new project. After clicking them you should be prompted with a popup like this:  
+<img src="images/3/com-ports.png">  
+Always select the port with the unique manfufacturer ID next to it, `wch.cn` in this case. If you don't see any **COM** ports available or the ones that are don't work when you try to flash device, there may be several issues.  
+    1. Bad USB cable or laptop USB port
+    2. Cable or port is power-delivery only
+    3. Missing/incorrect drivers (if you're on Windows)  
+    
+    The first fix attempt should always be swapping USB ports/cables (this is a very common issue!). If that doesn't solve it, go to [this link](https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers?tab=downloads) and download the latest **CP210x Universal Windows Driver**. Once you unzip the folder, open **Device Manager** and install the driver:  
+    <img src="images/3/add-driver.png">  
+    Restart VSCode and this should solve the issue.
+
+* `Full Clean` deletes the build folder, useful for doing a *turn if off and on again* debug strategy, sometimes resolves strange errors.
+
+You shouldn't need the rest of the IDF commands, but if you're curious come ask a BEEP mentor we'd be happy to explain!
+
+If you're able to build and flash your microcontroller, you should see the LED turn on when you press the button and then off when you release it. That's it for this week, come back next week to learn about **MCU Architecture, Debouncing, and Program State**!

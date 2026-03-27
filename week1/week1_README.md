@@ -1,4 +1,4 @@
-# Week 1: Environment Setup & GPIO Basics
+# Week 1 - Embedded Basics
 
 ## Overview
 Welcome to BEEP! This first week focuses on getting comfortable with the embedded development environment and understanding the most fundamental concept in embedded systems: **General Purpose Input/Output (GPIO)**.
@@ -17,7 +17,7 @@ If you're unfamiliar with KiCAD, there's a great introduction video [here](https
 
 <img src="images/1/breadboard.png">
 
-Breadboards are used to connect components without soldering. They are a great way to test and debug your circuit before solififying a design. The pins are connected by numbered row with the exception of the power rails, which are connected to all of the other pins in their column rail. The + and - power rails are used to power external components, and it very important that you ***never*** connect them together directly, as this causes a short-circuit and damages equipment.
+Breadboards are used to connect components without soldering. They are a great way to test and debug your circuit before solidifying a design. The pins are connected by numbered row with the exception of the power rails, which are connected to all of the other pins in their column rail. The + and - power rails are used to power external components, and it very important that you ***never*** connect them together directly, as this causes a short-circuit and damages equipment.
 
 ### 1.1.2 USB and Power
 

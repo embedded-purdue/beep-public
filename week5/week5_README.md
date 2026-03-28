@@ -2,7 +2,7 @@
  
 This week will be the final of our alarm system updates, this time focusing on an LCD Display and the method for controlling it: I2C!
 
-![Board Setup](images/board.jpg)  
+![Board Setup](images/1/board.jpg)  
 
 ---
 ## 5.1 Content Overview
@@ -21,15 +21,15 @@ When thinking about serial protocols it is important to learn some terminology. 
 
 Bus masters initiate transactions, whether it be sending to or requesting data from a subordinate. Subordinates respond to these requests, either by accepting the data sent to it or providing data when requested. Some protocols, like UART, are **point-to-point**. This means there are only two devices on the bus, directly connected together. 
 
-![uart-connect](images/uart-connect.png)
+![uart-connect](images/1/uart-connect.png)
 
 Other protocols, like SPI, allow for a single master to talk to many subordinates.
 
-![spi-connect](images/spi-connect.png)
+![spi-connect](images/1/spi-connect.png)
 
 The protocol we will be using today, I2C, allows many masters and many subordinates.
 
-![i2c-connect](images/i2c-connect.png)
+![i2c-connect](images/1/i2c-connect.png)
 
 UART and SPI are both **push-pull** protocols, where the master has to manually hold the wires at high and low voltage, as opposed to I2C, which is **open-drain**. This means that the pull-up resistors you see in the image make both wires default to high voltage, and a bus master just pulls the line low. This is what allows I2C to have multiple bus masters, if two masters tried to drive a line in push-pull they could short between each other's power and ground, which is obviously an issue. Since I2C masters only ever pull low, it isn't an issue.
 
@@ -44,72 +44,55 @@ Besides how the protocols function, one also needs to think about the speed of e
 ### 5.1.2 I2C Details
 For our application, all I2C transactions are initiated by the ESP32, with the display responding. A typical transaction looks like this:
 
-![i2c-bits](images/i2c-bits.png)
+![i2c-bits](images/1/i2c-bits.png)
 
 The bus master pulls **SDA** (the data line) low while **SCL** (the clock line) is high, which is the standard **start bit**. This tells the other devices on the bus that a transaction is coming. The next 7 bits are the **device address**, which is usually unique to each of the satellite devices on the bus. The display we are using today's ID is 0x27, all devices on the bus listen to these first 7 bits to determine whether the transaction is meant for them. The next bit is the Read/Write bit, which determines what type of transaction this is. The next bit is the satellite device **ACK** (acknowledge), which it sends if it matches the ID and correctly received the first byte.  
 
 The rest of the transaction is processed byte by byte, with acks between each. The master can provide however many bits it wants in a write and receive however many it wants in a read, only stopping when the master allows the bus to go high while SCL is high, the **stop** bit. Commonly I2C devices will have a **register map** in their datasheet which tells us where to look for specific data, and transactions are structured like: *Start*, *I2C_ADDR*, *R/W*, *Register Address*, *Data*..., *Stop*. Or a write and read back to back, where you write the register address and then read on the next transaction.
 
-## 5.2 Walkthrough
+## 5.2 Coding Activity
 
-### 5.2.1 Wiring
+### 5.2.1 Circuit Setup
 
-![Board Setup](images/schematic.png)
+![Board Setup](images/2/schematic.png)
 
 >Note: Connect the VCC pin on the LCD to the 5V pin on your ESP32, but do NOT connect anything else to the 5V pin. Also, if you have issues with the I2C lines try connecting a 2K Ohm pull-up resistor from SCL and SDA to the 3V power rail
 
-### 5.2.2 Setup
+### 5.2.2 Environment Setup
 
 Before you begin, please remember to create a new project:
 1. Press ```ctrl+shift+p``` to open up the command panel
-2. Look for ```ESP-IDF: Create New Empty Project```
-
-![new-project](images/new-project.png)
+2. Look for ```ESP-IDF: Create New Empty Project```  
+<img src="images/2/new-project.png">
 
 3. Enter a folder name in the popup window
-
-![popup](images/popup.png)
+<img src="images/2/popup.png">
 
 4. Select a location for the new folder (organize however you like!)
 
-5. Replace the  ```main``` folder of your new project with the template main folder provided in this week's github folder.
+5. Replace the ```main``` folder of your new project with the version provided in this week's github folder.  
+<img src="images/2/main-folder.png">
 
-![main-folder](images/main-folder.png)
+6. Press `ctrl + shift + p` to open the VSCode command panel again, and run **Add VS Code Configuration Folder**.
+<img src="images/2/add-config.png">
 
-### 5.2.3 Included Libraries
+### 5.2.3 Software
+
+#### Headers
+
 ```C
-#include "driver/gptimer.h"
-#include "driver/gpio.h"
-#include "driver/ledc.h"
 #include "driver/i2c_master.h"
 ```
-For peripheral structs and functions.
+Only one new header this week, this one provides the necessary data structures and functions to interact with the i2c peripheral.
 
-```C
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "rom/ets_sys.h"
-```
-For FreeRTOS task support and delay function to prevent timeout.
 
-```C
-#include "esp_timer.h"
-```
-For getting current time, used to debounce buttons.  
+#### Globals and Macros
 
-```C 
-#include "esp_log.h"
-```
-For logging messages to serial monitor.
-
-### 5.2.4 (New) Global Variables
-
-#### Constants
 ```C
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
 ```
-Pin macros
+Pin macros for the clock and data lines of the i2c peripheral.
 
 ```C
 #define LCD_ADDR             0x27
@@ -120,7 +103,6 @@ Pin macros
 ```  
 LCD_ADDR is the default I2C address for our LCD displays, and the rest are binary patterns for certain bit flags on the 1602 LCD, determined by the designers.
 
-#### ISR Flags
 ```C
 volatile bool first_code_press = false;
 volatile bool second_code_press = false;
@@ -128,25 +110,13 @@ volatile bool code_button_pressed = false;
 ```
 Splitting the code setting button flag into two, for more freedom when displaying on the screen in the main loop. We also add a combined flag for the code buttons so we can update the screen live on every button press.
 
-#### I2C Bus Handles
 ```C
 i2c_master_bus_handle_t bus_handle;
 i2c_master_dev_handle_t lcd_handle;
 ``` 
 Handles for the FreeRTOS I2C Bus Master configuration, used to send data over the selected I2C port; as well as the device that is connected to said port, which in our case is the LCD Display.
 
-### 5.2.5 Coding
-
-As seen in the schematic, we have added the LCD display this week! Most of the code provided is identical to what you've seen in previous weeks, with the exception of the setup & transaction code for said display. The new functions that you will be filling out are:
-```C
-static void lcd_send_cmd(uint8_t cmd)
-static void lcd_send_char(uint8_t cmd)
-void lcd_print(const char *str)
-void setup_lcd()
-```
-As well as some print statements in the main loop, which we have given suggestions for but are totally up to you!
-
-#### Function Descriptions
+#### Functions and To Do
 
 In `lcd_send_cmd` and `lcd_send_char` you need to fill in the buffer, which is just an array of 6 bytes, and send the command or character over the I2C bus. The array is 6 bytes long because of the interaction between the I2C chip on the back of the LCD and the LCD itself. The chip only uses 4 of the 8 D0-D7 bits for data (The other 4 are the flags you see macros defined for in helpers.h), which means we have to divide our writes into "nibbles" of 4 bits each. Both of these nibbles require a 3-step transmission process, where you send the data to let it settle, send it again with the enable flag toggled on, and then one final send. This pulses the enable flag and shifts the data you give it onto the display (This display is very odd, similar ones used in ECE 362 do not share this behavior, nor do many others you may come across).
 
@@ -157,7 +127,7 @@ This leads to an easy method for printing a string: print one character at a tim
 In `setup_lcd` you will need to fill in the bus and device config structs, and then call their respective initialization functions. The bus config and subsequent function call is a standard pattern across most embedded systems, but the device config is a software construct of the ESP-IDF and FreeRTOS. Both set internal registers on the ESP32 itself, with the device config changing the speed and i2c address for any transactions using the device's associated handle to abstract away those details from write or read calls. The rest of this function is the device specific initialization sequence for the LCD screen, which was found in an open-source github repo [here](https://github.com/DavidAntliff/esp32-i2c-lcd1602/blob/master/i2c-lcd1602.c).
 
 
-## 5.4 Helpful Links
+## 5.3 Helpful Links
 
 #### Documentation
 * [ESP32 WROOM 32E Pinout](https://docs.sunfounder.com/projects/umsk/en/latest/07_appendix/esp32_wroom_32e.html)

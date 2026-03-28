@@ -207,39 +207,45 @@ void app_main(void) {
 
         if (newly_armed) {
             newly_armed = false;
-            //set cursor to first line
-            //print "system armed"
-            //clear second line
+            lcd_set_cursor(0);
+            lcd_print("SYSTEM ARMED!");
+            lcd_set_cursor(1);
+            lcd_print("");
         }
         if (newly_disarmed) {
             newly_disarmed = false;
-            //set cursor to first line
-            //print "system disarmed"
-            //clear second line
+            lcd_set_cursor(0);
+            lcd_print("SYSTEM DISARMED!");
+            lcd_set_cursor(1);
+            lcd_print("");
         }
         if (newly_triggered) {
             newly_triggered = false;
-            //set cursor to first line
-            //print "alarm triggered"
+            lcd_set_cursor(0);
+            lcd_print("ALARM TRIGGERED!");
         }
         if (first_code_press) {
             first_code_press = false;
-            //set cursor to first line
-            //print "setting code"
-            //clear second line
+            lcd_set_cursor(0);
+            lcd_print("Setting Code");
+            lcd_set_cursor(1);
+            lcd_print("");
         }
         if (second_code_press) {
             second_code_press = false;
-            //set cursor to first line
-            //print "new code set"
-            //clear second line
+            lcd_set_cursor(0);
+            lcd_print("New Code Set!");
+            lcd_set_cursor(1);
+            lcd_print("");
         }
         if (code_button_pressed) {
             code_button_pressed = false;
-            //set cursor to second line
-            //if setting code, print "Set:" and the temp code
-            //if the alarm is armed, print "Guess:" and the guess code
-            //hint: use lcd_print_binary
+            lcd_set_cursor(1);
+            if (setting_code) {
+                lcd_print_binary("Set: ", temp_code); 
+            } else if (alarm_armed) {
+                lcd_print_binary("Guess: ", guess_code);
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }

@@ -2,14 +2,14 @@
  
 This week is focused on methods for controlling an RGB LED, adjusting the brightness and color. Through another extension of the alarm system we'll demonstrate what's possible when utilizing internal hardware timers, interrupts, and pulse width modulation (PWM) controllers.  
 
-![Board Setup](images/board.jpg)  
+![Board Setup](images/1/board.jpg)  
 
 ---
 ## 4.1 Content Overview
 
 ### RGB LED
 
-![RGB LED](images/rgb.png)
+![RGB LED](images/1/rgb.png)
 
 RGB LEDs typically have 4 pins, one each for red, green, and blue and a common anode or cathode. The model we are using is common cathode, which means the color pins share a ground connection and must be connected to Vdd in order to light up. By varying the voltages across each pin with PWM you can mix the colors to create almost any combination.
 
@@ -29,7 +29,7 @@ The ESP32 also has two system timers the **RTC TIMER** for low-power and sleep m
 
 Pulse-width modulation is the process of rapidly oscillating a digital signal to produce a square wave, varying the *duty cycle* to alter the signal.
 
-![PWM](images/pwm_diagram.png)
+![PWM](images/1/pwm_diagram.png)
 
 Duty cycle describes the percentage of the period that the voltage is high, and varying this percentage changes the average voltage across the pin. It is varied by changing the threshold value of a counter, which will toggle the pin on/off when the threshold is reached. In most configurations the pin also toggles when the counter reaches its max (or wrap) value and resets to zero (some PWM peripherals allow configurable count directions, reset values, and wrap behavior). The PWM peripheral can be used to control all kinds of devices that require varying voltage, such as LEDs and motors. Its also possible to produce rudimentary audio by feeding the PWM output through a low-pass filter.
 
@@ -37,146 +37,83 @@ Duty cycle describes the percentage of the period that the voltage is high, and 
 
 The ESP32 has two PWM peripherals, MCPWM for motor control and LEDC for LEDs. 
 
-![ledc diagram](images/ledc.png)
+![ledc diagram](images/1/ledc.png)
 
 The LEDC peripheral has two channels, high and low speed. The low speed channel applies duty cycle changes whenever told to by software, potentially causing glitchy output if the threshold value is changed during the middle of a period. The high speed channel uses register buffers to wait until the counter wraps before changing the threshold, and thus the duty cycle. This provides glitchless output regardless of software timing.  
 
 Each speed channel has 4 timers and 8 channels, configured like so:
 
-![ledc_detail](images/ledc_detail.png)
+![ledc_detail](images/1/ledc_detail.png)
 To setup PWM channels you first need to setup the base timer for its counter, similar to how you would setup a gptimer with tick resolution and frequency. After this, you have to setup the channel specifically to configure its interrupt (if needed), set the duty cycle, and connect it to a gpio pin.
 
-## 4.2 Walkthrough
+## 4.2 Coding Activity
 
-### 4.2.1 Wiring
+### 4.2.1 Circuit Setup
 
-![Board Setup](images/schematic.png)
+![Board Setup](images/2/schematic.png)
 
-### 4.2.2 Setup
+### 4.2.2 Environment Setup
 
 Before you begin, please remember to create a new project:
 1. Press ```ctrl+shift+p``` to open up the command panel
-2. Look for ```ESP-IDF: Create New Empty Project```
-
-![new-project](images/new-project.png)
+2. Look for ```ESP-IDF: Create New Empty Project```  
+<img src="images/2/new-project.png">
 
 3. Enter a folder name in the popup window
-
-![popup](images/popup.png)
+<img src="images/2/popup.png">
 
 4. Select a location for the new folder (organize however you like!)
 
-5. Replace the  ```main``` folder of your new project with the template main folder provided in this week's github folder.
+5. Replace the ```main``` folder of your new project with the version provided in this week's github folder.  
+<img src="images/2/main-folder.png">
 
-![main-folder](images/main-folder.png)
+6. Press `ctrl + shift + p` to open the VSCode command panel again, and run **Add VS Code Configuration Folder**.
+<img src="images/2/add-config.png">
 
-### 4.2.3 Included Libraries
+### 4.2.3 Software
+
+#### Headers
+
 ```C
 #include "driver/gptimer.h"
-#include "driver/gpio.h"
 #include "driver/rmt_tx.h"  
 #include "driver/ledc.h"
 ```
-For peripheral structs and functions.
+These header files provide all of the necessary data structures and functions to interact with the timer, ledc, and RMT peripherals, just the same as `gpio.h` does for the gpio peripheral.
 
-```C
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-```
-For FreeRTOS task support and delay function to prevent timeout.
+#### Globals and Macros
 
-```C
-#include "esp_timer.h"
-```
-For getting current time, used to debounce buttons.  
-
-```C 
-#include "esp_log.h"
-```
-For logging messages to serial monitor.
-
-### 4.2.4 Global Variables
-
-#### Constants
-```C
-#define GREEN_LED_PIN 27
-#define RED_LED_PIN 14
-#define BLUE_LED_PIN 12
-
-#define ARM_PIN 18
-#define DISARM_PIN 19
-#define CODE0_PIN 21
-#define CODE1_PIN 22
-#define SETCODE_PIN 23
-```
-Pin macros
-
-```C
-#define DEBOUNCE_TIME 100000
-#define DUTY_CYCLE_MAX 1000
-```  
-Maximum duty cycle is set to 1000 (even though it could go up to 1023) to make brightness math simpler. Debouncing time is measured in us, this is 100ms you may change it if needed.
-
-#### RGB LED State
 ```C
 int brightness = 0;
 int step = 50;
 ```
-We use global variables to store the current brightness and step increment for flashing the red alarm LED to allow them to persist across calls to update_leds.
+These store global state for the RGB LED, determing the current brightness and rate at which it flashes when the alarm is triggered.
 
-#### Timer Handle
 ```C
 gptimer_handle_t timer_handle;
-``` 
-Handle for the FreeRTOS timer object, not needed outside of the setup function, but should we to need to change/stop it, it becomes necessary. Good practice to make this a global or local within app_main (or whatever task is using it).
-
-### 4.2.5 Coding
-
-As seen in the schematic, the only hardware change this week was replacing the 3 separate LEDs with the single RGB LED. The activity goal hasn't changed, and as such most of the code from week 3 will be reused as is. The software changes this week take two forms, setup functions such as:
-```C
-void timer_setup(uint32_t res_hz, uint64_t alarm_hz)
-void pwm_setup()
-void rgb_strip_setup()
 ```
-and the periodic function
-```C
-void update_leds(void)
-``` 
-With this update we will have completed the overhaul of the original alarm system code from week 2!
-
-#### Function Descriptions
+This handle is used by multiple functions and allows us to reference the timer struct we create globally in the program. Good practice to make this a global or local within app_main (or whatever task is using it).
 
 ```C
-void timer_setup(uint32_t res_hz, uint64_t alarm_hz)
+volatile bool timer_triggered = false;
 ```
-This function does the following:
-1. Configures the timer (resolution, clock source, etc.)
-2. Configures the alarm (frequency, auto-reload behavior, etc.)
-3. Sets a callback function for the alarm interrupt
-4. Starts the timer
+One more ISR flag used for triggering brightness changes while flashing the LED during alarm triggers.
 
-```C
-void pwm_setup()
-```
-This function does the following:
-1. Configures the PWM peripheral's base timer
-2. Configures each of the 3 channels
+#### Functions
 
-```C
-void rgb_strip_setup()
-```
-This function does the following:
-1. Configures the RMT TX channel
-2. Builds the bit encoder
-3. Enables the RMT channel
+* `update_leds` has the same responsibilities as before, updating the LEDs to reflect current program state, but this week it uses the LEDC peripheral instead of gpio.
 
-```C
-void update_leds()
-```
-This function does the following:
-1. Basic color set conditions based on alarm state
-2. Red alarm flashing check
-3. Update all 3 channels
+* `timer_setup` sets up the general purpose timer that is used to trigger LED brightness updates.
+
+* `pwm_setup` sets up the pwm peripheral that is used to control the RGB LED and reflect program state.
+
+* `timer_handler` is the ISR for the general purpose timer setup by `timer_setup`
+
+#### To Do
+
+1. Fill in the missing lines in `timer_setup`
+2. Fill in the missing lines in `pwm_setup`
+3. Fill in the missing lines in `update_leds`
 
 ## 4.3 Bonus
 

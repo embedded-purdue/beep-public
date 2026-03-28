@@ -38,13 +38,13 @@ void pwm_setup() {
         .clk_cfg = //auto clock
     };
     // Setup individual channels
-    // use the ledc_channel_config_t type once for each LED color
-    // and initialize the gpio_num to whichever XXX_LED_PIN macro,
+    // define 3 ledc_channel_config_t types (like we did with ledc_timer_config_t), once for each LED color
+    // and initialize the gpio_num to whichever XXX_LED_PIN macro applies,
     // speed_mode to high speed mode, give each a unique channel (use 0-2)
     // disable interrupts, select timer 0, and set the duty and hpoint equal to 0
 
     //call ledc_timer_config with the above struct
-    //call ledc_channel config 3 times, one for each of the channel structs above
+    //call ledc_channel_config 3 times, one for each of the channel structs above
 }
 
 

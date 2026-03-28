@@ -21,24 +21,27 @@ const char* TAG = "MAIN";
 #define ALARM_PERIOD 200 * 1000
 
 // Input pin config
-//copy from last week, except intr_type which should now be
-//a negative edge trigger since our buttons are active low
 gpio_config_t input_pin = {
-    .pin_bit_mask = 
-    .mode = 
-    .pull_up_en = 
-    .pull_down_en = 
-    .intr_type = 
+    .pin_bit_mask = (1ULL << ARM_PIN) |
+                    (1ULL << DISARM_PIN) |
+                    (1ULL << CODE0_PIN) |
+                    (1ULL << CODE1_PIN) |
+                    (1ULL << SETCODE_PIN),
+    .mode = GPIO_MODE_INPUT,
+    .pull_up_en = GPIO_PULLUP_ENABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .intr_type = //negative edge interrupt
 };
 
 // Output pin config
-//copy in from last week
 gpio_config_t output_pin = {
-    .pin_bit_mask = 
-    .mode =
-    .pull_up_en = 
-    .pull_down_en =
-    .intr_type = 
+    .pin_bit_mask = (1ULL << RED_LED_PIN) |
+                    (1ULL << GREEN_LED_PIN) |
+                    (1ULL << BLUE_LED_PIN),
+    .mode = GPIO_MODE_OUTPUT,
+    .pull_up_en = GPIO_PULLUP_DISABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .intr_type = GPIO_INTR_DISABLE
 };
 
 // Alarm variables
@@ -91,7 +94,7 @@ bool debounce_check(intmax_t* last_press) {
 
 // ARM
 static void handle_arm_press(void *arg) {
-    //do a debounce check, if it is false, return and do nothing
+    if (!debounce_check(&previous_arm_press)) {return;}
 
     //if the alarm is unarmed and we aren't setting the code
     //1. set armed = true
@@ -101,7 +104,7 @@ static void handle_arm_press(void *arg) {
 
 // DISARM
 static void handle_disarm_press(void *arg) {
-    //do a debounce check, if it is false, return and do nothing
+    if (!debounce_check(&previous_arm_press)) {return;}
 
     if (alarm_armed) {
         // if guess code is correct
@@ -118,7 +121,7 @@ static void handle_disarm_press(void *arg) {
 
 // SETCODE
 static void handle_setcode_press(void *arg) {
-    //do a debounce check, if it is false, return and do nothing
+    if (!debounce_check(&previous_arm_press)) {return;}
 
     // first press
     // if alarm is not armed and setting_code is false
@@ -134,26 +137,22 @@ static void handle_setcode_press(void *arg) {
 
 // CODE 0
 static void handle_code0_press(void *arg) {
-    //do a debounce check, if it is false, return and do nothing
+    if (!debounce_check(&previous_arm_press)) {return;}
 
-    // Code set press
     // if setting code is true
     // shift a 0 into temp_code
     
-    // Code guess press
     // if alarm is armed
     // shift a 0 into guess_code
 }
 
 // CODE 1
 static void handle_code1_press(void *arg) {
-    //do a debounce check, if it is false, return and do nothing
+    if (!debounce_check(&previous_arm_press)) {return;}
 
-    // Code set press
     // if setting code is true
     // shift a 1 into temp_code
     
-    // Code guess press
     // if alarm is armed
     // shift a 1 into guess_code
 }
@@ -178,11 +177,13 @@ void update_leds(void) {
 
 
 void setup_gpio_irq() {
-    //install gpio service for ESP_INTR_FLAG_EDGE (since we're using negative edge triggered interrupts)
+    //call gpio_install_isr_service for ESP_INTR_FLAG_EDGE (since we're using negative edge triggered interrupts)
 
-    //add a handler for each of the 5 buttons as described in the readme, 
-    //use the pin macros defined on lines 14-18, and just the function names
-    //exactly as written above, ie. handle_arm_press not handle_arm_press()
+    // call gpio_isr_handler_add() 5 times, once for each of the 5 buttons
+    // each call has 3 arguments,
+    // 1. the pin number (use the macros defined above)
+    // 2. the function name 
+    //3 . NULL
 }
 
 // ------------------------ Main Application ------------------------
@@ -204,11 +205,22 @@ void app_main(void) {
     while (1) {
         update_leds();
 
-        //for each of the 4 flags on lines 62-65,
-        // if (flag is true) {
-        //    set flag = false
-        //    log some descriptive message, ie. ESP_LOGI(TAG,"SYSTEM ARMED!"), ESP_LOGI(TAG,"SYSTEM DISARMED!")
-        // }
+        if (newly_armed) {
+            newly_armed = false;
+            ESP_LOGI(TAG, "SYSTEM ARMED!\n");
+        }
+        if (newly_disarmed) {
+            newly_disarmed = false;
+            ESP_LOGI(TAG, "SYSTEM DISARMED!\n");
+        }
+        if (newly_triggered) {
+            newly_triggered = false;
+            ESP_LOGI(TAG, "ALARM TRIGGERED!\n");
+        }
+        if (new_code_set) {
+            new_code_set = false;
+            print_code(code, "New Code Set:");
+        }
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }

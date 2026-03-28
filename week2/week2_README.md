@@ -247,6 +247,7 @@ These variables are all timestamps, used to measure against current time when de
 3. Fill in the missing lines in `handle_guess_code`
 4. Fill in the missing lines in `update_leds`
 5. Fill in the missing lines in `app_main`
+6. Fill in the blanks in the global gpio pin configs.
 
 You will find more detailed instructions in the template code provided, but feel free to ask questions if you get stuck!
 
